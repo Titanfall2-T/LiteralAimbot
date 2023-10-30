@@ -1,0 +1,172 @@
+global function aim_Init
+
+//Create a bool variable on whether the aimbot is on or not (starts out as false)
+bool aimOn = false
+
+void function aim_Init()
+{
+    // Added in v1.4.0 so controller players can use the mod more easily, or anyone who uses a different key for shooting
+    for( int key = 0; key < 132; key++ )
+    {
+        if( GetKeyBinding( key ) == "+attack" )
+        {
+            RegisterButtonReleasedCallback( key, aimToggleOff )
+        }
+    }
+
+    AddLocalPlayerDidDamageCallback( aim )
+
+    // Added in v1.3.0, previously a seperate mod
+    thread aim_TriggerBot() // Big thanks to Klemmbaustein on Thunderstore for making this part a lot easier to make 8=========D
+}
+
+void function aim( entity attacker, entity victim, vector unknownVec, int unknownInt )
+{
+    //Sets the speed that the aimbot can move the players view in the yaw axis
+    GetLocalClientPlayer().ClientCommand( "cl_yawspeed " + GetConVarInt( "la_aim_speed" ) )
+    //Sets the speed that the aimbot can move the players view in the pitch axis (commented out for now as we don't have a way to move view up and down)
+    //GetLocalClientPlayer().ClientCommand( "cl_pitchspeed 69420" )
+    if( attacker == GetLocalClientPlayer() && !aimOn )
+    {
+        aimOn = true
+        thread aimCheck( attacker, victim )
+    }
+}
+
+void function aimToggleOff( int buttonEnum )
+{
+    aimOn = false
+    GetLocalClientPlayer().ClientCommand( "-right" )
+    GetLocalClientPlayer().ClientCommand( "-left" )
+}
+
+void function aimCheck( entity attacker, entity victim )
+{
+    while( aimOn && GetConVarInt( "la_enabled" ) == 1 )
+    {
+        if( !IsValid( victim ) )
+        {
+            break
+        }
+        // Added "|| victim.IsPlayer() == false" in v1.1.0 to prevent tracking grunts. This may be optional in the future.
+        if( attacker != GetLocalClientPlayer() || victim.IsPlayer() == false )
+        {
+            aimOn = false
+            break
+        }
+        /*Added in v1.3.0, primarily for the trigger bot functionality so the aimbot doesn't keep tracking after a kill.
+        Even though this was useful in the past since it could be used for targeting a player and seeing where they spawn,
+        it is no longer useful since we have enable_debug_overlays, PT, etc. all viable options for ESP*/
+        if( GetHealthFrac( victim ) <= 0.0 )
+        {
+            aimOn = false
+            GetLocalClientPlayer().ClientCommand( "-right" )
+            GetLocalClientPlayer().ClientCommand( "-left" )
+            break
+        }
+
+        vector victimOriginVec = victim.GetOrigin() - attacker.GetOrigin()
+
+        //Split up the enemyOriginVec into different variables(x,y,z)
+        float victimPosX = victimOriginVec.x
+        float victimPosY = victimOriginVec.y
+        float victimPosZ = victimOriginVec.z
+
+        //Solves for side 'C' of the attacker to victim aiming triangle
+        float victimTriangleSideC = sqrt( pow( victimPosX, 2 ) + pow( victimPosY, 2 ) )
+
+        //Represents the view angle to aim at the victim (in radians)
+        float aimViewAngleForwardYaw = atan( victimPosZ / victimTriangleSideC ) * ( -1 )
+        float aimViewAngleForwardPitch = atan( victimPosY / victimPosX )
+
+        //Represents the view angle to aim at the victim (in degrees)
+        float aimViewAngleForwardYawDegrees = aimViewAngleForwardYaw * 57.2957795
+        float aimViewAngleForwardPitchDegrees = aimViewAngleForwardPitch * 57.2957795
+
+        print( "[LA] Current pitch degrees to aim by : " + aimViewAngleForwardPitchDegrees )
+
+        //A variable to represent the local players forward view yaw angle
+        float attackerViewAngleForwardYaw = attacker.EyeAngles().x
+
+        print( "[LA] Current attacker view yaw angle : " + attackerViewAngleForwardYaw )
+
+        //A variable to represent the local players forward view pitch angle (will be changed with if statements to fix for the view forward vectors 'y' value)
+        float attackerViewAngleForwardPitch = attacker.EyeAngles().y
+
+        print( "[LA] Current attacker view pitch angle : " + attackerViewAngleForwardPitch )
+
+        if( victimPosX < 0 )
+        {
+            if( aimViewAngleForwardPitchDegrees < 90 && aimViewAngleForwardPitchDegrees > 0 )
+            {
+                aimViewAngleForwardPitchDegrees = aimViewAngleForwardPitchDegrees - 180
+            }
+            if( aimViewAngleForwardPitchDegrees > -90 && aimViewAngleForwardPitchDegrees < 0 )
+            {
+                aimViewAngleForwardPitchDegrees = aimViewAngleForwardPitchDegrees + 180
+            }
+        }
+
+        if( attackerViewAngleForwardPitch < aimViewAngleForwardPitchDegrees )
+        {
+            GetLocalClientPlayer().ClientCommand( "-right" )
+            GetLocalClientPlayer().ClientCommand( "+left" )
+        }
+        if( attackerViewAngleForwardPitch > aimViewAngleForwardPitchDegrees )
+        {
+            GetLocalClientPlayer().ClientCommand( "-left" )
+            GetLocalClientPlayer().ClientCommand( "+right" )
+        }
+
+        print( "[LA] End of aim iteration..." )
+
+        wait( 1 / GetConVarInt( "la_aim_rate" ) )
+    }
+    print( "[LA] Aim loop ended." )
+}
+
+// Added in v1.3.0, preveiously a seperate mod
+void function aim_TriggerBot()
+{
+    while( true )
+    {
+        WaitFrame()
+        if( GetConVarInt( "la_tb" ) == 0 )
+        {
+            continue
+        }
+        if( GetLocalClientPlayer() != null )
+        {
+            TraceResults results = GetViewTrace( GetLocalClientPlayer() )
+
+            if( IsValid( results.hitEnt ) && results.hitEnt.IsHuman() )
+            {
+                if( results.hitEnt.GetTeam() == GetLocalClientPlayer().GetTeam() )
+                {
+                    continue
+                }
+                GetLocalClientPlayer().ClientCommand( "+attack" )
+                wait( 0.0 )
+                GetLocalClientPlayer().ClientCommand( "-attack" )
+                if( IsValid( GetLocalClientPlayer() ) && GetLocalClientPlayer().GetActiveWeapon() == null )
+                {
+                    //print( "[LA][DEBUG] Local client player weapon is null" )
+                    continue
+                }
+                if( GetConVarFloat( "la_ass_power" ) <= 0.0 || GetConVarFloat( "la_ass_power" ) > 1.0 )
+                {
+                    //print( "[LA][DEBUG][WARNING] ConVar la_ass_power must be a value no greater than 1.0 or no less than or equal to 0.0" )
+                    continue
+                }
+                if( GetConVarFloat( "la_ass_power" ) < 1.0 && GetConVarFloat( "la_ass_power" ) > 0.0 )
+                {
+                    if( IsValid( GetLocalClientPlayer() ) && GetLocalClientPlayer().GetActiveWeapon() != null )
+                    {
+                        //ConVar ass_power determines the percentage of the weapons maximum fire rate that is to be used
+                        wait( ( 1 / GetLocalClientPlayer().GetActiveWeapon().GetWeaponSettingFloat( eWeaponVar.fire_rate ) ) * ( 1 / GetConVarFloat( "la_ass_power" ) ) )
+                    }
+                }
+            }
+        }
+    }
+}
