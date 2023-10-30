@@ -1,0 +1,38 @@
+{
+    "Name": "Literal Aimbot",
+    "Description": "Based Aimbot troll\nMade by NST Associates",
+    "Version": "1.4.0",
+
+    "LoadPriority": "0",
+    "ConVars": [
+        {
+            "Name": "la_enabled",
+            "DefaultValue": "0"
+        },
+        {
+            "Name": "la_aim_speed",
+            "DefaultValue": "50"
+        },
+        {
+            "Name": "la_aim_rate",
+            "DefaultValue": "100"
+        },
+        {
+            "Name": "la_tb",
+            "DefaultValue": "0"
+        },
+        {
+            "Name": "la_ass_power",
+            "DefaultValue": "1.0"
+        }
+    ],
+    "Scripts": [
+        {
+            "Path": "aim.gnut",
+            "RunOn": "CLIENT && MP",
+            "ClientCallback": {
+                "After": "aim_Init"
+            }
+        }
+    ]
+}
