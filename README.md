@@ -3,7 +3,9 @@ This mod is well... literally just aimbot, but it's a Northstar Client Mod.
 There is only 1 exception, and that is that this mod is not finished fully yet, as the aimbot is only able to track horizontally. This means you will have to aim vertically yourself, however this is very easy to do.
 
 HELLO Falconnor4
+
 HELLO TreyR9
+
 Be warned : THIS MOD IS ACTUALLY AIMBOT AND WILL WORK!!!
 
 ## How to install
