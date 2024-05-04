@@ -4,10 +4,6 @@ There is only 1 exception, and that is that this mod is not finished fully yet, 
 
 This mod was originally made by TimeIsUendning and sponsored by NST, TFUS, and CUM
 
-HELLO Falconnor4
-
-HELLO TreyR9
-
 Be warned : THIS MOD IS ACTUALLY AIMBOT AND WILL WORK!!!
 
 ## How to install
